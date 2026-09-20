@@ -61,6 +61,7 @@ data class CustomGroup(
     val allow: Set<Int>,
     var enabled: Boolean = true
 )
+
 @Composable
 fun MainScreen() {
     var history by remember { mutableStateOf<List<DrawResult>>(emptyList()) }
@@ -70,6 +71,7 @@ fun MainScreen() {
     var selectedBlues by remember { mutableStateOf((1..16).toSet()) }
     var selectedTab by remember { mutableStateOf(0) }
 
+    // 条件
     var sumMin by remember { mutableStateOf(70) }
     var sumMax by remember { mutableStateOf(140) }
     var spanMin by remember { mutableStateOf(12) }
@@ -85,6 +87,7 @@ fun MainScreen() {
     var road2 by remember { mutableStateOf(setOf(1, 2, 3)) }
 
     var customGroups by remember { mutableStateOf(listOf<CustomGroup>()) }
+
     var filterResult by remember { mutableStateOf<List<List<Int>>>(emptyList()) }
     var filtering by remember { mutableStateOf(false) }
     var filterTime by remember { mutableStateOf(0L) }
@@ -131,14 +134,14 @@ fun MainScreen() {
                             oddCount = setOf(1,2,3,4,5); bigCount = setOf(1,2,3,4,5)
                             primeCount = setOf(0,1,2,3,4); zone1 = setOf(0,1,2,3,4)
                             zone2 = setOf(0,1,2,3,4); zone3 = setOf(0,1,2,3,4)
-                            road0 = setOf(0,1,2,3,4); road1 = setOf(0,1,2,3,4); road2 = setOf(0,1,2,3, deb)
+                            road0 = setOf(0,1,2,3,4); road1 = setOf(0,1,2,3,4); road2 = setOf(0,1,2,3,4)
                         }
-                        "mid ind" -> {
+                        "mid" -> {
                             sumMin = 70; sumMax = 140; spanMin = 12; spanMax = 28
                             oddCount = setOf(2,3,4); bigCount = setOf(2,3,4)
                             primeCount = setOf(1,2,3); zone1 = setOf(1,2,3)
                             zone2 = setOf(1,2,3); zone3 = setOf(1,2,3)
-                            road0 = setOf(1,2,3); road1 = setOf(1,2,3); cast road2 = setOf(1,2,3)
+                            road0 = setOf(1,2,3); road1 = setOf(1,2,3); road2 = setOf(1,2,3)
                         }
                         "tight" -> {
                             sumMin = 85; sumMax = 125; spanMin = 15; spanMax = 25
@@ -150,7 +153,10 @@ fun MainScreen() {
                 }
             )
             4 -> CustomGroupTab(customGroups) { customGroups = it }
-            5 -> ResultTab(selectedReds, selectedBlues, filterResult, filtering, filterTime) { filtering = true }
+            5 -> ResultTab(
+                selectedReds, selectedBlues, filterResult, filtering, filterTime,
+                onStart = { filtering = true }
+            )
             6 -> StatsTab(history)
         }
     }
@@ -168,7 +174,7 @@ fun MainScreen() {
         if (filtering) {
             val start = System.currentTimeMillis()
             filterResult = doFilter(
-                selectedReds.toList().sorted(),
+                pool = selectedReds.toList().sorted(),
                 sumMin, sumMax, spanMin, spanMax,
                 oddCount, bigCount, primeCount,
                 zone1, zone2, zone3, road0, road1, road2,
@@ -180,6 +186,9 @@ fun MainScreen() {
         }
     }
 }
+
+// ==================== 页面组件 ====================
+
 @Composable
 fun HomeTab(latest: DrawResult?, history: List<DrawResult>, loading: Boolean, message: String, onUpdate: () -> Unit) {
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -233,11 +242,13 @@ fun PoolTab(
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text("红球候选池", color = Color(0xFFE0A458), fontWeight = FontWeight.SemiBold)
         Text("已选 ${selected.size} 个（至少6个才能过滤）", color = Color(0xFF8B93A7), modifier = Modifier.padding(vertical = 6.dp))
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 12.dp)) {
             ActionChip("全选", onSelectAll)
             ActionChip("清空", onClear)
             ActionChip("反选", onInvert)
         }
+
         LazyVerticalGrid(
             columns = GridCells.Fixed(6),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -248,7 +259,8 @@ fun PoolTab(
                 val isSelected = selected.contains(num)
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier
+                        .size(48.dp)
                         .background(if (isSelected) Color(0xFFE0A458) else Color(0xFF2A3444), CircleShape)
                         .clickable { onToggle(num) }
                 ) {
@@ -286,7 +298,8 @@ fun BlueTab(selected: Set<Int>, onToggle: (Int) -> Unit) {
                 val isSelected = selected.contains(num)
                 Box(
                     contentAlignment = Alignment.Center,
-                    modifier = Modifier.size(56.dp)
+                    modifier = Modifier
+                        .size(56.dp)
                         .background(if (isSelected) Color(0xFF2F6FB0) else Color(0xFF2A3444), CircleShape)
                         .clickable { onToggle(num) }
                 ) {
@@ -352,6 +365,7 @@ fun CustomGroupTab(groups: List<CustomGroup>, onChange: (List<CustomGroup>) -> U
         Text("自定义号码组", color = Color(0xFFE0A458), fontWeight = FontWeight.SemiBold)
         Text("开启后参与过滤", color = Color(0xFF8B93A7), fontSize = 12.sp)
         Spacer(modifier = Modifier.height(12.dp))
+
         Button(
             onClick = {
                 showAdd = true
@@ -364,7 +378,9 @@ fun CustomGroupTab(groups: List<CustomGroup>, onChange: (List<CustomGroup>) -> U
         ) {
             Text("+ 添加自定义组", color = Color.Black, fontWeight = FontWeight.Bold)
         }
+
         Spacer(modifier = Modifier.height(16.dp))
+
         LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items(groups.size) { index ->
                 val g = groups[index]
@@ -439,9 +455,7 @@ fun CustomGroupTab(groups: List<CustomGroup>, onChange: (List<CustomGroup>) -> U
                     showAdd = false
                 }) { Text("确定") }
             },
-            dismissButton = {
-                TextButton(onClick = { showAdd = false }) { Text("取消") }
-            }
+            dismissButton = { TextButton(onClick = { showAdd = false }) { Text("取消") } }
         )
     }
 }
@@ -559,6 +573,8 @@ fun Ball(number: Int, isBlue: Boolean, size: androidx.compose.ui.unit.Dp = 36.dp
         Text(number.toString().padStart(2, '0'), color = Color.White, fontWeight = FontWeight.Bold, fontSize = (size.value * 0.38f).sp)
     }
 }
+
+// ==================== 过滤逻辑 ====================
 
 fun doFilter(
     pool: List<Int>,
